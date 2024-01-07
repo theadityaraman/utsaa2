@@ -92,7 +92,7 @@ const UploadFile = async (fileSrc) => {
   return file;
 };
 
-module.exports = {
+export {
   createAssistant,
   getAssistant,
   getMessages,
