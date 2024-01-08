@@ -4,6 +4,15 @@ import Image from 'next/image'
 import React, { useState, useEffect } from 'react';
 import Slider from '@mui/material/Slider';
 import Papa from 'papaparse'
+import ResultPage from './resultsPage/page.js';
+import Pentagon from './components/Pentagon';
+
+// import { useRouter } from 'next/router';
+// let useRouter;
+// if (typeof window !== 'undefined') {
+//   useRouter = require('next/router').useRouter;
+// }
+
 
   async function startAndAsk(msg) {
     try {
@@ -29,7 +38,7 @@ import Papa from 'papaparse'
 
       // Start the assistant
       const assistantFormData = new FormData();
-      assistantFormData.append('instructions', "idkrn");
+      assistantFormData.append('instructions', "You must only return a singular number. Under any circumstances.");
       assistantFormData.append('threadId', threadId);
       assistantFormData.append('assistantId', process.env.NEXT_PUBLIC_REACT_APP_ASSISTANT_ID);
 
@@ -42,7 +51,7 @@ import Papa from 'papaparse'
       // await new Promise(resolve => setTimeout(resolve, 6000)); // Adjust time as needed
 
       // Fetch the messages
-      const timeoutDuration = 30000; // Timeout duration in milliseconds, e.g., 30000 for 30 seconds
+      const timeoutDuration = 40000; // Timeout duration in milliseconds, e.g., 30000 for 30 seconds
       const startTime = Date.now();
 
 
@@ -69,19 +78,21 @@ import Papa from 'papaparse'
 
 
 
-
-
     } catch (error) {
       console.error('Error in processing:', error);
     }
   }
 
 export default function Home() {
-
-  console.log()
+  // const router = useRouter();
+  // const [router, setRouter] = useState(null);
+  // useEffect(() => {
+  //   setRouter(require('next/router'));
+  // }, []);
 
 
   const [file, setFile] = useState(null);
+  const [sortedDb, setSortedDb] = useState(null);
 
   const [creativity, setCreativity] = useState(50);
   const [feasibility, setFeasibility] = useState(50);
@@ -96,35 +107,82 @@ export default function Home() {
 
 
 
-  const answers = [];
-  Papa.parse(uploadedFile, {
-    complete: async (result) => {
-      for (const data of result.data) {
-        console.log(data);
-        const msg = "Summarize the following idea: " + data["solution"];
 
-        answers.push(await startAndAsk(msg));
-        await new Promise(resolve => setTimeout(resolve, 100));
+  const db = {};
 
+  const prefdesc = [
+    "TC",
+    "F",
+    "I",
+    "N",
+    "E",
+    "M",
+  ];
+  const prefixes1 = [
+"Do not justify anything. Your response MUST be in the integer format do not give any variance in the prices (if you find yourself wanting to, just return the average). Return all your answers in Canadian Dollars (CAD), but do not actually write out CAD in the answer (it should just be an integer). I cannot stress enough the importance of formatting; this response will be directly inputted back into a computer program so you cannot include any introductory text like [Here you go:] and it cannot be formatted with mathematica or otherwise; should just be text in integer format. IF YOU START JUSTIFYING THINGS, DO NOT OUTPUT IT. ONLY ONE INTEGER. I CANNOT STRESS HOW IMPORTANT THIS IS. to solve the following problem:",
+"Do not justify anything. Your response MUST be in the integer format, do not give any variance in the score (if you find yourself wanting to, just return the average). I cannot stress enough the importance of formatting; this response will be directly inputted back into a computer program so you cannot include any introductory text like [Here you go:] and it cannot be formatted with mathematica or otherwise; should just be text in integer format. IF YOU START JUSTIFYING THINGS, DO NOT OUTPUT IT. ONLY ONE INTEGER. I CANNOT STRESS HOW IMPORTANT THIS IS. to solve the following problem:",
+"",
+"",
+"",
+"",
+  ];
+  const prefixes2 = [
+    "provide AN ACTUAL TOTAL COST estimation for the following solution: {SOLUTION}",
+    "provide A FESABILITY SCORE estimation for the following solution:",
+    "",
+    "",
+    "",
+    "",
+  ];
+  try {
+      const parseResult = await new Promise((resolve, reject) => {
+        Papa.parse(uploadedFile, {
+          complete: (result) => resolve(result),
+          header: true,
+          skipEmptyLines: true,
+          dynamicTyping: true,
+          error: (error) => reject(error),
+        });
+      });
 
+      await Promise.all(
+        parseResult.data.map(async (data) => {
+          const answers = {};
+          answers["ID"] = data["id"];
+          await Promise.all(
+            prefixes1.map(async (prefix, index) => {
+              // const msg = prefix + data["problem"] + prefixes2[index] + data["solution"];
+              // answers[prefdesc[index]] = await startAndAsk(msg);
+              answers[prefdesc[index]] = Math.floor(Math.random() * 101);
+            })
+          );
 
+          answers["TC"] *= 100000;
+          // individual stuff
+          answers["N"] *= creativity/100;
+          answers["F"] *= feasibility/100;
+          answers["M"] *= management/100;
+          answers["I"] *= impact/100;
+          answers["E"] *= environmentalImpact/100;
 
-      }
-      // wait timeout time + intervalTime x submissionCount
-      await new Promise(resolve => setTimeout(resolve, 500000));
-      console.log("final answers: ");
-      console.log(answers);
-    },
-    header: true,
-    skipEmptyLines: true,
-    dynamicTyping: true,
-    error: (error) => {
-      console.error('Error parsing CSV:', error);
+          answers["Overall"] = (answers["N"]+answers["F"]+answers["M"]+answers["I"]+answers["E"])/
+            (creativity+feasibility+management+impact+environmentalImpact) * 100;
+
+          db[data["id"]] = answers;
+        })
+      );
+
+      const sortedDbArray = Object.values(db).sort((a, b) => b.Overall - a.Overall);
+      setSortedDb(sortedDbArray);
+
+      console.log(sortedDb);
+      console.log(sortedDbArray);
+      // window.location.href = '/resultsPage';
+      // router.push('/resultsPage');
+    } catch (error) {
+      console.error('Error parsing CSV or processing data:', error);
     }
-  });
-
-};
-
+  };
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-between p-24">
@@ -205,6 +263,31 @@ export default function Home() {
       valueLabelDisplay="auto"
     />
   </form>
+  {sortedDb && (
+  <div className="options-container">
+    <h1>Top 3 Options</h1>
+    <div className="options-grid">
+      {sortedDb.slice(0, 3).map((option, index) => (
+        <div key={index} className="card">
+          <h2>Option {option.ID}</h2>
+          <div className="pentagon-container">
+            <Pentagon
+              creativity={option.N}
+              feasibility={option.F}
+              management={option.M}
+              impact={option.I}
+              environmentalImpact={option.E}
+            />
+          </div>
+          <p>Overall Score: {option.Overall.toFixed(2)}</p>
+          <p>Aproximate Cost: {option.TC.toFixed(2)}</p>
+          {/* Add other statistics you want to display */}
+        </div>
+      ))}
+    </div>
+  </div>
+)}
+
 
     </main>
   )

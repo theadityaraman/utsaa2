@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createThread, gethread, deleteThread } from "../../utils/OpenAI";
+import { createThread, getThread, deleteThread } from "../../utils/OpenAI";
 
 //create new thread
 export async function POST(req) {
@@ -28,7 +28,7 @@ export async function GET(req) {
       );
     }
 
-    let thread = await gethread(threadId);
+    let thread = await getThread(threadId);
 
     return NextResponse.json(thread);
   } catch (error) {

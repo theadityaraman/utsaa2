@@ -25,3 +25,33 @@ body {
     )
     rgb(var(--background-start-rgb));
 }
+/* Add this to your CSS */
+/* Add this to your CSS */
+.options-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.options-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 20px;
+}
+
+.card {
+  border: 1px solid #ddd;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  text-align: center;
+}
+
+.pentagon-container {
+  margin-top: 20px; /* Adjust as needed */
+}
+
+/* Add other styling as needed */
+
+/* Add other styling as needed */
